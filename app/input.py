@@ -25,3 +25,10 @@ def from_request():
     if set(body) - {'assays', 'plan', 'proposal'} or not isinstance(body.get('assays'), str):
         raise TrialError('ASSAYS_REQUIRED', 400)
     return body
+
+
+def json_body():
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        raise TrialError('JSON_REQUIRED', 400)
+    return body

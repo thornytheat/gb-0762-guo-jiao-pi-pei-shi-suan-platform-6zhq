@@ -1,0 +1,75 @@
+<section class="panel workstation">
+  <div class="bench-head"><h3>成本关账台</h3><span class="state {{ 'pass' if data.open_period else 'fail' }}">开放月 {{ data.open_period or '未开账' }}</span></div>
+  <dl class="kpis">
+    <div><dt>来料批</dt><dd>{{ data.counts.lots }}</dd></div>
+    <div><dt>可先关</dt><dd class="pass">{{ data.counts.closeable }}</dd></div>
+    <div><dt>待核实</dt><dd class="fail">{{ data.counts.waiting }}</dd></div>
+    <div><dt>开放月实际差额</dt><dd>{{ data.open_month.actual_delta_yuan }}</dd></div>
+    <div><dt>开放月暂估差额</dt><dd>{{ data.open_month.provisional_delta_yuan }}</dd></div>
+  </dl>
+  <div class="checks">
+    <details class="ledger-form"><summary>登记 / 更正发票（暂估或正式）</summary>
+      <form method="post" action="/api/closing/invoices" data-api="json">
+        <div class="inputs">
+          <label>来料批号<input name="lot" placeholder="PJ-01" required></label>
+          <label>发票号<input name="invoice_no" placeholder="INV-001" required></label>
+          <label>账期<input name="period" placeholder="2026-11" required></label>
+          <label>类型<select name="kind"><option value="ACTUAL">正式 ACTUAL</option><option value="PROVISIONAL">暂估 PROVISIONAL</option></select></label>
+          <label>数量 g<input name="quantity_g" type="number" min="1" required></label>
+          <label>金额（元）<input name="amount_yuan" type="number" step="0.01" min="0.01" required></label>
+          <label>版本（更正时递增）<input name="version" type="number" min="1" placeholder="默认自动递增"></label>
+        </div>
+        <button type="submit">提交发票</button>
+      </form>
+    </details>
+    <details class="ledger-form"><summary>封账（冻结已核实成本）</summary>
+      <form method="post" action="/api/closing/close" data-api="json">
+        <div class="inputs">
+          <label>封账月<input name="period" value="{{ data.open_period or '' }}" required></label>
+          <label>下一开放月<input name="next_period" placeholder="2026-12" required></label>
+        </div>
+        <button type="submit">执行封账</button>
+      </form>
+    </details>
+  </div>
+  <p class="api-note" role="status" data-api-note></p>
+</section>
+
+<section class="panel">
+  <h3>可先关 · 发票已核实且领用对账通过</h3>
+  <div class="sheet"><table>
+    <thead><tr><th>来料批</th><th>状态</th><th>合格领用 g</th><th>发票量 g</th><th>整批发票金额（元）</th><th>分摊明细</th></tr></thead>
+    <tbody>
+    {% for view in data.closeable %}
+      <tr data-issued="True"><td>{{ view.lot }}</td><td class="state pass">{{ view.status }}</td><td class="num">{{ view.issued_g }}</td><td class="num">{{ view.invoice_quantity_g }}</td><td class="num">{{ view.invoice_amount_yuan }}</td>
+        <td class="num">{% for line in view.lines %}{{ line.ref }} {{ line.quantity_g }}g / ¥{{ line.amount_yuan }}{% if not loop.last %} ｜ {% endif %}{% endfor %}</td></tr>
+    {% else %}<tr><td colspan="6">没有可关账的来料批。</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
+<section class="panel">
+  <h3>还要等 · 暂估 / 缺票 / 对账未平</h3>
+  <div class="sheet"><table>
+    <thead><tr><th>来料批</th><th>暂估状态</th><th>合格领用 g</th><th>发票量 g</th><th>暂估金额（元）</th><th>原因</th><th>分摊明细（暂估行标记）</th></tr></thead>
+    <tbody>
+    {% for view in data.waiting %}
+      <tr><td>{{ view.lot }}</td><td class="state fail">{{ view.status }}</td><td class="num">{{ view.issued_g }}</td><td class="num">{{ view.invoice_quantity_g }}</td><td class="num">{{ view.invoice_amount_yuan }}</td><td>{{ view.reason }}</td>
+        <td class="num">{% for line in view.lines %}{{ line.ref }} {{ line.quantity_g }}g / ¥{{ line.amount_yuan }}{% if line.estimated %}（暂估）{% endif %}{% if not loop.last %} ｜ {% endif %}{% else %}—{% endfor %}</td></tr>
+    {% else %}<tr><td colspan="7">暂无待核实批次。</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
+<section class="panel">
+  <h3>已封账月份（金额保持原样）与开放月差额</h3>
+  <div class="sheet"><table>
+    <thead><tr><th>账期</th><th>封账时间 UTC</th><th>已核实成本（元）</th><th>暂估挂账（元）</th><th>冻结行数</th></tr></thead>
+    <tbody>
+    {% for period in data.closed_periods %}
+      <tr><td>{{ period.period }}</td><td>{{ period.closed_at }}</td><td class="num pass">{{ period.reported_yuan }}</td><td class="num fail">{{ period.provisional_yuan }}</td><td class="num">{{ period.lines|length }}</td></tr>
+    {% else %}<tr><td colspan="5">尚无封账记录。</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+  <p class="quantity">开放月 {{ data.open_month.period or '—' }}：实际差额 ¥{{ data.open_month.actual_delta_yuan }}（晚到发票/更正落此），暂估差额 ¥{{ data.open_month.provisional_delta_yuan }}（不进已封账月份）。</p>
+</section>

@@ -14,6 +14,15 @@
 | M5 领用与余量核算 | 核对库存、领用和缺口 | POST /api/stock | `app/modules/stock/balance.py` | `tests/test_stock.py` |
 | M6 批次留档复跑 | 留档并验证重复提交 | POST /api/batches | `app/modules/batches/storage.py` | `tests/test_batches.py` |
 | M7 试配证据签发 | 复核试配状态并下载 | GET /api/certificate/<id> | `app/modules/certificate/service.py` | `tests/test_certificate.py` |
+| M8 果胶成本关账 | 发票入账、分摊、封账与暂估跟踪 | GET /api/closing | `app/modules/closing/service.py` | `tests/test_closing.py` |
+
+## 成本关账规则（M8）
+
+1. **先关与待核实**：只有留档批次中试配签发合格（`can_trial` 且库存平衡、缺口为零）的领用才计入成本；正式发票已核实的来料批标 `VERIFIED` 可先关，仅暂估价标 `PROVISIONAL`、缺票标 `MISSING_INVOICE`、发票量小于合格领用标 `INVOICE_SHORTAGE`，均挂待核实。
+2. **整批发票对账分摊**：同一来料批供多单时，按各单克重比分摊整批发票金额（整数分、最大余数法），发票量超出合格领用的部分生成 `REMAINDER` 余料行；各单加余料合计与整批发票分毫不差。
+3. **晚到发票**：发票账期早于开放月时 `late=true`，差额一律落入开放月；封账快照只取封账时点已入账发票，已封账月份金额永久保持原样。
+4. **更正幂等**：发票按 `invoice_no + version` 留痕，更正事件只记相对上次入账的 `delta_cents`；同版本同载荷重试返回既有事件且不重复计费，同版本异载荷报 `INVOICE_VERSION_CONFLICT`。版本间类型变更（暂估转正式）在开放月先冲回旧类型再记新类型。
+5. **关账页面**：`/trial/closing` 与 `GET /api/closing` 展示可关/待核实分组、各单与余料金额（元）、暂估标记、已封账月份冻结数和开放月差额。
 
 ## 陷阱登记
 

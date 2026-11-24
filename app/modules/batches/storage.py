@@ -38,6 +38,7 @@ def write(root, record):
 
 
 def history(root):
-    paths = sorted(Path(root).glob('*.json'), key=lambda path: path.stat().st_mtime_ns, reverse=True)[:50]
+    paths = sorted((path for path in Path(root).glob('*.json') if re.fullmatch(r'[a-f0-9]{64}', path.stem)),
+                   key=lambda path: path.stat().st_mtime_ns, reverse=True)[:50]
     return [{key: record[key] for key in ('batch_id', 'rule', 'created_at', 'elapsed_ms')}
             for record in (read(root, path.stem) for path in paths)]

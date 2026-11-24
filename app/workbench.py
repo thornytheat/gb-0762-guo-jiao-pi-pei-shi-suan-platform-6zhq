@@ -8,6 +8,7 @@ from .input import load
 from .modules.batches.service import preserve
 from .modules.batches.storage import history, read
 from .modules.certificate.service import issue
+from .modules.closing.service import book, build_view, close_period
 from .pipeline import process
 from .stages import LABELS, PLAN_FIELDS, STAGES
 
@@ -42,6 +43,8 @@ def review(stage='stock'):
             entries = history(root)
             if stage == 'certificate' and (entries or request.args.get('batch')):
                 pack = issue(read(root, request.args.get('batch') or entries[0]['batch_id']))
+        elif stage == 'closing':
+            data = build_view(root)
         else:
             data = process(source, stage)
     except TrialError as exc:

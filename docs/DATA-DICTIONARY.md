@@ -9,3 +9,9 @@
 寻优用到期日、批号排序，以最少领用批为首要目标，同批数优先最大化较早批次的用量。超出 14 个可用整步批或 300,000 状态上限时报错。不可行时整单留待处理，库存保持原量。结算库存包含已采信但过期与不足整步的库存，冲突批计入隔离清单。
 
 同份化验文本和同参数计算同一 SHA-256 标识。运行保存源摘要、计划、候选提案、UTC 建立时间、耗时、规则和逐阶段证据。归档经同目录临时文件写入和原子发布，重复提交返回既有快照。证据摘要以排序键、UTF-8 和紧凑 JSON 复算。
+
+## 成本关账台账（M8）
+
+台账保存在归档目录的 `cost-ledger.json`，与留档批次快照（64 位哈希文件名）同目录但互不混淆。`POST /api/closing/invoices` 接收 `lot, invoice_no, period, kind, quantity_g, amount_cents`（或 `amount_yuan`，两位小数转整数分），`version` 省略时自动递增。`kind` 仅 `ACTUAL`（正式）或 `PROVISIONAL`（暂估）；`period` 格式 `YYYY-MM`。每个事件记录 `posted_period`（开放月；晚到发票不在其业务账期入账）、`delta_cents`（相对同号上一版本的差额）与 `late` 标记。
+
+`GET /api/closing` 返回 `closeable`/`waiting` 来料批分组、每批 `lines`（按单 `batch_id` 分摊行与 `REMAINDER` 余料行，`estimated` 标记暂估）、`closed_periods` 封账快照（`reported_yuan` 已核实、`provisional_yuan` 暂估挂账）和 `open_month` 差额。`POST /api/closing/close` 接收 `period`（须等于当前开放月）与 `next_period`（须更晚），冻结后开放月切换，旧月快照不再被任何后续事件改写。金额内部一律整数分累计，展示层转两位小数元。

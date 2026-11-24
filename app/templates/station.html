@@ -18,9 +18,9 @@
       <ol class="process" aria-label="水平试配工序">
       {% for key,label in stages %}<li data-current="{{ 'true' if stage == key else 'false' }}"><a href="/trial/{{ key }}{% if mode == 'clean' %}?sample=clean{% endif %}"><i aria-hidden="true"></i>{{ label }}</a></li>{% endfor %}
       </ol>
-      {% if stage != 'certificate' %}{% include 'material.html' %}{% endif %}
+      {% if stage not in ['certificate', 'closing'] %}{% include 'material.html' %}{% endif %}
       {% if error %}<article class="panel fault" role="alert">{{ error }}。检查投料资料后重试。</article>{% endif %}
-      {% if stage in ['batches','certificate'] %}{% include 'records.html' %}{% elif data %}
+      {% if stage in ['batches','certificate'] %}{% include 'records.html' %}{% elif stage == 'closing' %}{% include 'closing.html' %}{% elif data %}
         {% if stage in ['assay','dry','formula'] %}{% include 'measure.html' %}{% endif %}
         {% if stage in ['blend','stock'] %}{% include 'scale.html' %}{% endif %}
         {% if data.assay.isolated %}<section class="panel"><details id="assay-notes"><summary>化验隔离 · {{ data.assay.isolated|length }} 行</summary><div class="sheet"><table><thead><tr><th>行号</th><th>原因</th><th>原值</th></tr></thead><tbody>{% for row in data.assay.isolated %}<tr><td>{{ row.line }}</td><td>{{ row.code }}</td><td>{{ row.raw|join(' · ') }}</td></tr>{% endfor %}</tbody></table></div></details></section>{% endif %}
